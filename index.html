@@ -217,17 +217,104 @@
   }
   .games-bottom-row .game-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transform: scale(1.03); }
 
+
+  .icon-btn.is-bookmarked {
+    color: #f7f4f9;
+    background: rgba(255,255,255,0.12);
+  }
+
+  .icon-btn:active {
+    transform: scale(0.94);
+  }
+
+  @media (hover: none) {
+    .icon-btn:hover {
+      transform: none;
+    }
+  }
+
+  /* Custom cursor (desktop / fine-pointer only) */
+  @media (hover: hover) and (pointer: fine) {
+    html, body, a, button, .icon-btn, .nav-link {
+      cursor: none;
+    }
+
+    .cursor-dot,
+    .cursor-ring {
+      position: fixed;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: 9999;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      will-change: transform;
+    }
+
+    .cursor-dot {
+      width: 6px;
+      height: 6px;
+      background: #f3e8ff;
+      box-shadow: 0 0 6px 2px rgba(168, 85, 247, 0.85);
+      transition: opacity 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .cursor-ring {
+      width: 44px;
+      height: 44px;
+      border: none;
+      background: radial-gradient(
+        circle,
+        rgba(230, 200, 255, 0.9) 0%,
+        rgba(168, 85, 247, 0.6) 30%,
+        rgba(109, 40, 217, 0.32) 55%,
+        rgba(76, 29, 149, 0.12) 75%,
+        rgba(76, 29, 149, 0) 100%
+      );
+      mix-blend-mode: screen;
+      filter: blur(1px);
+      transition: width 0.25s ease, height 0.25s ease, opacity 0.2s ease,
+        filter 0.25s ease, background 0.25s ease;
+    }
+
+    .cursor-ring.is-hover {
+      width: 76px;
+      height: 76px;
+      filter: blur(2px);
+      background: radial-gradient(
+        circle,
+        rgba(220, 255, 220, 0.95) 0%,
+        rgba(74, 222, 128, 0.65) 28%,
+        rgba(22, 163, 74, 0.35) 52%,
+        rgba(6, 78, 59, 0.14) 74%,
+        rgba(6, 78, 59, 0) 100%
+      );
+    }
+
+    .cursor-dot.is-hover {
+      background: #ecfdf5;
+      box-shadow: 0 0 6px 2px rgba(34, 197, 94, 0.85);
+    }
+
+    .cursor-ring.is-hidden,
+    .cursor-dot.is-hidden {
+      opacity: 0;
+    }
+  }
 </style>
 </head>
 <body>
 
+  <div class="cursor-dot" id="cursorDot"></div>
+  <div class="cursor-ring" id="cursorRing"></div>
+
   <div class="card">
     <div class="topbar">
       <div class="topbar-left">
-        <button class="icon-btn" aria-label="like" title="like">
+        <button class="icon-btn" id="likeBtn" aria-label="Bookmark this page" title="Bookmark this page" aria-pressed="false">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-6.7-4.35-9.33-8.2C.86 10.1 1.4 6.6 4.2 5.05c2.1-1.15 4.6-.55 5.8 1.15L12 8.2l2-2c1.2-1.7 3.7-2.3 5.8-1.15 2.8 1.55 3.34 5.05 1.53 7.75C18.7 16.65 12 21 12 21z"/></svg>
         </button>
-        <button class="icon-btn" aria-label="refresh" title="refresh">
+        <button class="icon-btn" id="reloadBtn" aria-label="Reload page" title="Reload page">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         </button>
       </div>
@@ -274,6 +361,121 @@
       </div>
     </div>
   </div>
+
+
+  <script>
+    // Custom cursor: a small dot that tracks the pointer exactly, plus a
+    // larger ring that eases toward it. The ring grows and glows over
+    // anything clickable. Only active on devices with a real mouse.
+    (() => {
+      const isFinePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+      if (!isFinePointer) return;
+
+      const dot = document.getElementById('cursorDot');
+      const ring = document.getElementById('cursorRing');
+      if (!dot || !ring) return;
+
+      let mouseX = window.innerWidth / 2;
+      let mouseY = window.innerHeight / 2;
+      let ringX = mouseX;
+      let ringY = mouseY;
+      let hasMoved = false;
+
+      window.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        dot.style.transform = `translate(-50%, -50%) translate(${mouseX}px, ${mouseY}px)`;
+        if (!hasMoved) {
+          hasMoved = true;
+          ringX = mouseX;
+          ringY = mouseY;
+          dot.classList.remove('is-hidden');
+          ring.classList.remove('is-hidden');
+        }
+      });
+
+      document.addEventListener('mouseleave', () => {
+        dot.classList.add('is-hidden');
+        ring.classList.add('is-hidden');
+      });
+      document.addEventListener('mouseenter', () => {
+        dot.classList.remove('is-hidden');
+        ring.classList.remove('is-hidden');
+      });
+
+      function tick() {
+        ringX += (mouseX - ringX) * 0.18;
+        ringY += (mouseY - ringY) * 0.18;
+        ring.style.transform = `translate(-50%, -50%) translate(${ringX}px, ${ringY}px)`;
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+
+      const hoverTargets = document.querySelectorAll(
+        'a, button, .icon-btn, .nav-link, .status-pill, .avatar'
+      );
+      hoverTargets.forEach((el) => {
+        el.addEventListener('mouseenter', () => {
+          ring.classList.add('is-hover');
+          dot.classList.add('is-hover');
+        });
+        el.addEventListener('mouseleave', () => {
+          ring.classList.remove('is-hover');
+          dot.classList.remove('is-hover');
+        });
+      });
+    })();
+
+    (() => {
+      const likeBtn = document.getElementById('likeBtn');
+      const reloadBtn = document.getElementById('reloadBtn');
+
+      // Reload the current page on both desktop and mobile.
+      reloadBtn.addEventListener('click', () => {
+        window.location.reload();
+      });
+
+      // Browsers do not expose a universal JavaScript API for creating a
+      // bookmark/favorite. We therefore persist the user's bookmark state
+      // locally and give the appropriate native-browser shortcut/instruction.
+      const bookmarkKey = 'profile-page-bookmarked';
+
+      const setBookmarkState = (bookmarked) => {
+        likeBtn.classList.toggle('is-bookmarked', bookmarked);
+        likeBtn.setAttribute('aria-pressed', String(bookmarked));
+        likeBtn.setAttribute(
+          'aria-label',
+          bookmarked ? 'Page bookmarked' : 'Bookmark this page'
+        );
+        likeBtn.setAttribute(
+          'title',
+          bookmarked ? 'Page bookmarked' : 'Bookmark this page'
+        );
+      };
+
+      const isBookmarked = localStorage.getItem(bookmarkKey) === 'true';
+      setBookmarkState(isBookmarked);
+
+      likeBtn.addEventListener('click', async () => {
+        const nextState = localStorage.getItem(bookmarkKey) !== 'true';
+        localStorage.setItem(bookmarkKey, String(nextState));
+        setBookmarkState(nextState);
+
+        if (nextState) {
+          // Desktop browsers generally use Ctrl/Cmd+D. Mobile browsers
+          // require the browser's own bookmark/favorites menu.
+          const isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform);
+          const shortcut = isMac ? '⌘ + D' : 'Ctrl + D';
+
+          if (window.matchMedia('(pointer: coarse)').matches) {
+            alert('Page marked as bookmarked. To add it to your browser bookmarks, use your browser’s menu and choose Add to Bookmarks/Favorites.');
+          } else {
+            alert(`Page marked as bookmarked. To add it to the browser bookmarks, press ${shortcut}.`);
+          }
+        }
+      });
+    })();
+  </script>
 
 </body>
 </html>
