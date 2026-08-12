@@ -217,7 +217,6 @@
   }
   .games-bottom-row .game-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transform: scale(1.03); }
 
-
   .icon-btn.is-bookmarked {
     color: #f7f4f9;
     background: rgba(255,255,255,0.12);
@@ -233,7 +232,6 @@
     }
   }
 
-  /* Custom cursor (desktop / fine-pointer only) */
   @media (hover: hover) and (pointer: fine) {
     html, body, a, button, .icon-btn, .nav-link {
       cursor: none;
@@ -301,6 +299,52 @@
       opacity: 0;
     }
   }
+
+  .tap-ripple {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%) scale(0.3);
+    background: radial-gradient(
+      circle,
+      rgba(230, 200, 255, 0.9) 0%,
+      rgba(168, 85, 247, 0.6) 30%,
+      rgba(109, 40, 217, 0.32) 55%,
+      rgba(76, 29, 149, 0.12) 75%,
+      rgba(76, 29, 149, 0) 100%
+    );
+    mix-blend-mode: screen;
+    filter: blur(1px);
+    opacity: 0.9;
+    animation: tap-ripple-burst 0.55s ease-out forwards;
+  }
+
+  .tap-ripple.is-hover {
+    background: radial-gradient(
+      circle,
+      rgba(220, 255, 220, 0.95) 0%,
+      rgba(74, 222, 128, 0.65) 28%,
+      rgba(22, 163, 74, 0.35) 52%,
+      rgba(6, 78, 59, 0.14) 74%,
+      rgba(6, 78, 59, 0) 100%
+    );
+  }
+
+  @keyframes tap-ripple-burst {
+    0% {
+      transform: translate(-50%, -50%) scale(0.3);
+      opacity: 0.9;
+    }
+    100% {
+      transform: translate(-50%, -50%) scale(1.6);
+      opacity: 0;
+    }
+  }
 </style>
 </head>
 <body>
@@ -362,11 +406,7 @@
     </div>
   </div>
 
-
   <script>
-    // Custom cursor: a small dot that tracks the pointer exactly, plus a
-    // larger ring that eases toward it. The ring grows and glows over
-    // anything clickable. Only active on devices with a real mouse.
     (() => {
       const isFinePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
       if (!isFinePointer) return;
@@ -427,17 +467,37 @@
     })();
 
     (() => {
+      const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+      if (!isCoarsePointer) return;
+
+      const hoverSelector = 'a, button, .icon-btn, .nav-link, .status-pill, .avatar';
+
+      document.addEventListener('touchstart', (e) => {
+        const touch = e.touches[0];
+        if (!touch) return;
+
+        const target = document.elementFromPoint(touch.clientX, touch.clientY);
+        const isInteractive = target && target.closest(hoverSelector);
+
+        const ripple = document.createElement('div');
+        ripple.className = 'tap-ripple' + (isInteractive ? ' is-hover' : '');
+        ripple.style.left = `${touch.clientX}px`;
+        ripple.style.top = `${touch.clientY}px`;
+        document.body.appendChild(ripple);
+
+        ripple.addEventListener('animationend', () => ripple.remove());
+        setTimeout(() => ripple.remove(), 700);
+      }, { passive: true });
+    })();
+
+    (() => {
       const likeBtn = document.getElementById('likeBtn');
       const reloadBtn = document.getElementById('reloadBtn');
 
-      // Reload the current page on both desktop and mobile.
       reloadBtn.addEventListener('click', () => {
         window.location.reload();
       });
 
-      // Browsers do not expose a universal JavaScript API for creating a
-      // bookmark/favorite. We therefore persist the user's bookmark state
-      // locally and give the appropriate native-browser shortcut/instruction.
       const bookmarkKey = 'profile-page-bookmarked';
 
       const setBookmarkState = (bookmarked) => {
@@ -462,8 +522,6 @@
         setBookmarkState(nextState);
 
         if (nextState) {
-          // Desktop browsers generally use Ctrl/Cmd+D. Mobile browsers
-          // require the browser's own bookmark/favorites menu.
           const isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform);
           const shortcut = isMac ? '⌘ + D' : 'Ctrl + D';
 
